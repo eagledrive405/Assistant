@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Product Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="header-icon">◈</span>
+      <span class="header-title">Work Product Manager</span>
+    </div>
+    <div class="header-right">
+      <span id="header-status" class="header-status"></span>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <input type="text" id="search-input" class="search-input" placeholder="Search work products…" />
+        <button class="btn btn-primary btn-new" id="btn-new-product">+ New Work Product</button>
+      </div>
+      <div class="sidebar-list" id="sidebar-list">
+        <div class="empty-state-small">No work products yet.</div>
+      </div>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <main class="main-content" id="main-content">
+      <div class="welcome-state">
+        <div class="welcome-icon">◈</div>
+        <h2>Work Product Manager</h2>
+        <p>Select a work product from the sidebar, or create a new one to get started.</p>
+        <button class="btn btn-primary" id="btn-new-product-welcome">+ New Work Product</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ══ Modal: New Work Product ══ -->
+  <div class="modal-overlay" id="modal-new-product">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>New Work Product</h3>
+        <button class="modal-close" data-modal="modal-new-product">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Title <span class="required">*</span></label>
+        <input type="text" id="new-product-title" class="form-input" placeholder="e.g. Contract Review Q1" />
+
+        <label class="form-label">Description</label>
+        <textarea id="new-product-description" class="form-textarea" rows="3" placeholder="Describe this work product…"></textarea>
+
+        <label class="form-label">Status</label>
+        <select id="new-product-status" class="form-select">
+          <option value="todo">To Do</option>
+          <option value="in-progress">In Progress</option>
+          <option value="review">In Review</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-new-product">Cancel</button>
+        <button class="btn btn-primary" id="btn-create-product">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Modal: Add Email ══ -->
+  <div class="modal-overlay" id="modal-add-email">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>Add Email</h3>
+        <button class="modal-close" data-modal="modal-add-email">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-col">
+            <label class="form-label">From</label>
+            <input type="text" id="email-from" class="form-input" placeholder="sender@example.com" />
+          </div>
+          <div class="form-col">
+            <label class="form-label">To</label>
+            <input type="text" id="email-to" class="form-input" placeholder="you@example.com" />
+          </div>
+        </div>
+        <label class="form-label">Subject</label>
+        <input type="text" id="email-subject" class="form-input" placeholder="Email subject…" />
+
+        <label class="form-label">Date Received</label>
+        <input type="datetime-local" id="email-date" class="form-input" />
+
+        <label class="form-label">Body <span class="required">*</span></label>
+        <textarea id="email-body" class="form-textarea" rows="6" placeholder="Paste email body here…"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-add-email">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-email">Add Email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Modal: View Email ══ -->
+  <div class="modal-overlay" id="modal-view-email">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3 id="view-email-subject">Email</h3>
+        <button class="modal-close" data-modal="modal-view-email">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="email-meta">
+          <span><strong>From:</strong> <span id="view-email-from"></span></span>
+          <span><strong>To:</strong> <span id="view-email-to"></span></span>
+          <span><strong>Date:</strong> <span id="view-email-date"></span></span>
+        </div>
+        <div class="email-body-view" id="view-email-body"></div>
+
+        <div class="ai-reply-section">
+          <div class="ai-reply-header">
+            <h4>AI Reply</h4>
+            <div class="ai-reply-controls">
+              <select id="reply-tone" class="form-select form-select-sm">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="concise">Concise</option>
+                <option value="formal">Formal</option>
+              </select>
+              <button class="btn btn-ai" id="btn-generate-reply">✦ Generate Reply</button>
+            </div>
+          </div>
+          <div id="ai-reply-loading" class="ai-loading" style="display:none">
+            <span class="spinner"></span> Claude is writing a reply…
+          </div>
+          <textarea id="view-email-reply" class="form-textarea ai-reply-textarea" rows="8" placeholder="No reply generated yet. Click 'Generate Reply' to have Claude write one."></textarea>
+          <div class="ai-reply-actions" id="ai-reply-actions" style="display:none">
+            <button class="btn btn-ghost btn-sm" id="btn-copy-reply">Copy to Clipboard</button>
+            <button class="btn btn-ai btn-sm" id="btn-regen-reply">↻ Regenerate</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-modal="modal-view-email">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
