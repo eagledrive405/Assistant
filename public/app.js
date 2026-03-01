@@ -11,6 +11,7 @@ const state = {
   activeTab: 'overview',
   viewingEmailId: null,
   searchQuery: '',
+  gmail: { connected: false, inbox: [], assigningEmail: null },
 };
 
 // ── DOM Refs ───────────────────────────────────────────────────────────────
@@ -569,10 +570,181 @@ document.getElementById('search-input').addEventListener('input', e => {
   renderSidebar();
 });
 
+// ── Gmail ───────────────────────────────────────────────────────────────────
+async function checkGmailStatus() {
+  try {
+    const { connected } = await api.get('/api/gmail/status');
+    state.gmail.connected = connected;
+    renderGmailButton();
+
+    // Show toast if returning from OAuth
+    const params = new URLSearchParams(location.search);
+    if (params.get('gmail') === 'connected') { toast('Gmail connected!'); history.replaceState({}, '', '/'); }
+    if (params.get('gmail') === 'error')     { toast('Gmail connection failed. Try again.', 'error'); history.replaceState({}, '', '/'); }
+  } catch (_) {}
+}
+
+function renderGmailButton() {
+  const btn = document.getElementById('btn-gmail-header');
+  if (!btn) return;
+  if (state.gmail.connected) {
+    btn.textContent = 'Gmail Inbox';
+    btn.className   = 'btn btn-gmail-on btn-sm';
+    btn.onclick     = openGmailModal;
+  } else {
+    btn.textContent = 'Connect Gmail';
+    btn.className   = 'btn btn-gmail-connect btn-sm';
+    btn.onclick     = () => { window.location.href = '/auth/gmail'; };
+  }
+}
+
+async function openGmailModal() {
+  openModal('modal-gmail');
+  if (!state.gmail.inbox.length) await syncGmail();
+}
+
+async function syncGmail() {
+  const q       = document.getElementById('gmail-search')?.value?.trim() || 'in:inbox';
+  const loading = document.getElementById('gmail-loading');
+  const syncBtn = document.getElementById('btn-gmail-sync');
+  loading.style.display = 'flex';
+  if (syncBtn) syncBtn.disabled = true;
+
+  try {
+    const { emails } = await api.get(`/api/gmail/sync?q=${encodeURIComponent(q)}&max=30`);
+    state.gmail.inbox = emails;
+    renderGmailInbox();
+  } catch (err) {
+    if (err.message.includes('expired') || err.message.includes('not connected')) {
+      state.gmail.connected = false;
+      renderGmailButton();
+      closeModal('modal-gmail');
+      toast('Gmail session expired. Please reconnect.', 'error');
+    } else {
+      toast('Gmail sync failed: ' + err.message, 'error');
+    }
+  } finally {
+    loading.style.display = 'none';
+    if (syncBtn) syncBtn.disabled = false;
+  }
+}
+
+function renderGmailInbox() {
+  const inbox = document.getElementById('gmail-inbox');
+  if (!inbox) return;
+
+  if (!state.gmail.inbox.length) {
+    inbox.innerHTML = `<div class="empty-state-tab"><div style="font-size:32px">📭</div><p>No emails found. Try a different search.</p></div>`;
+    return;
+  }
+
+  inbox.innerHTML = state.gmail.inbox.map((email, i) => `
+    <div class="gmail-email-row ${email.already_imported ? 'gmail-imported' : ''}">
+      <div class="gmail-email-info">
+        <div class="gmail-email-subject">${escHtml(email.subject || '(no subject)')}</div>
+        <div class="gmail-email-from">${escHtml(email.from_email)}</div>
+        <div class="gmail-email-date">${formatDate(email.received_at)}</div>
+      </div>
+      <div class="gmail-email-action">
+        ${email.already_imported
+          ? `<span class="gmail-imported-badge">✓ Imported</span>`
+          : `<button class="btn btn-primary btn-sm" data-gmail-idx="${i}">+ Add to Work Product</button>`
+        }
+      </div>
+    </div>
+  `).join('');
+
+  inbox.querySelectorAll('[data-gmail-idx]').forEach(btn => {
+    btn.addEventListener('click', () => openAssignModal(parseInt(btn.dataset.gmailIdx)));
+  });
+}
+
+function openAssignModal(idx) {
+  const email = state.gmail.inbox[idx];
+  if (!email) return;
+  state.gmail.assigningEmail = email;
+
+  document.getElementById('assign-email-preview').innerHTML = `
+    <div class="assign-email-preview-inner">
+      <strong>${escHtml(email.subject || '(no subject)')}</strong>
+      <div style="color:var(--text-2);font-size:12px;margin-top:4px">${escHtml(email.from_email)}</div>
+    </div>
+  `;
+
+  const select = document.getElementById('assign-product-select');
+  select.innerHTML = state.products.length
+    ? state.products.map(p => `<option value="${p.id}">${escHtml(p.title)}</option>`).join('')
+    : '<option value="">No work products yet</option>';
+
+  openModal('modal-gmail-assign');
+}
+
+async function confirmAssign() {
+  const email = state.gmail.assigningEmail;
+  if (!email) return;
+  const workProductId = parseInt(document.getElementById('assign-product-select').value);
+  if (!workProductId) return toast('Select a work product first', 'error');
+
+  const btn = document.getElementById('btn-confirm-assign');
+  btn.disabled = true;
+  try {
+    await api.post('/api/gmail/assign', {
+      work_product_id:  workProductId,
+      gmail_message_id: email.gmail_message_id,
+      subject:          email.subject,
+      from_email:       email.from_email,
+      to_email:         email.to_email,
+      body:             email.body,
+      received_at:      email.received_at,
+    });
+
+    // Mark as imported in inbox
+    const idx = state.gmail.inbox.findIndex(e => e.gmail_message_id === email.gmail_message_id);
+    if (idx !== -1) state.gmail.inbox[idx].already_imported = true;
+    renderGmailInbox();
+
+    // Update local email count
+    const pidx = state.products.findIndex(p => p.id === workProductId);
+    if (pidx !== -1) state.products[pidx].email_count = (state.products[pidx].email_count || 0) + 1;
+    renderSidebar();
+
+    // Reload emails if this work product is open
+    if (state.selectedId === workProductId) {
+      state.emails = await api.get(`/api/work-products/${workProductId}/emails`);
+      renderProductDetail();
+    }
+
+    closeModal('modal-gmail-assign');
+    toast('Email added to work product');
+  } catch (err) {
+    toast('Failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function disconnectGmail() {
+  if (!confirm('Disconnect Gmail? You can reconnect anytime.')) return;
+  await api.delete('/api/gmail/disconnect');
+  state.gmail.connected = false;
+  state.gmail.inbox     = [];
+  renderGmailButton();
+  closeModal('modal-gmail');
+  toast('Gmail disconnected');
+}
+
+// Gmail modal event listeners
+document.getElementById('btn-gmail-sync').addEventListener('click', syncGmail);
+document.getElementById('btn-confirm-assign').addEventListener('click', confirmAssign);
+document.getElementById('btn-gmail-disconnect').addEventListener('click', disconnectGmail);
+document.getElementById('gmail-search').addEventListener('keydown', e => {
+  if (e.key === 'Enter') syncGmail();
+});
+
 // ── Boot ───────────────────────────────────────────────────────────────────
 (async function init() {
   try {
-    await loadProducts();
+    await Promise.all([loadProducts(), checkGmailStatus()]);
     if (state.products.length > 0) {
       renderSidebar();
     }

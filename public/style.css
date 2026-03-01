@@ -307,3 +307,46 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 #toast.show { opacity: 1; transform: translateY(0); }
 #toast.toast-error { border-color: var(--red); color: var(--red); }
 #toast.toast-success { border-color: var(--green); }
+
+/* ── Gmail ────────────────────────────────────────────────────────────── */
+.btn-gmail-connect {
+  background: var(--bg-2); color: var(--text-2); border: 1px solid var(--border);
+}
+.btn-gmail-connect:hover { background: var(--bg-3); color: var(--text-1); }
+.btn-gmail-on {
+  background: #1a3828; color: var(--green); border: 1px solid rgba(63,185,80,0.3);
+}
+.btn-gmail-on:hover { opacity: 0.85; }
+
+.modal-gmail { max-width: 720px; height: 80vh; display: flex; flex-direction: column; }
+.gmail-toolbar {
+  display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.gmail-toolbar .form-input { flex: 1; }
+.gmail-loading { padding: 16px 20px; flex-shrink: 0; }
+
+.gmail-inbox { flex: 1; overflow-y: auto; padding: 8px 0; }
+.gmail-inbox::-webkit-scrollbar { width: 4px; }
+.gmail-inbox::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.gmail-email-row {
+  display: flex; align-items: center; gap: 12px; padding: 11px 20px;
+  border-bottom: 1px solid var(--border-light); transition: background 0.15s;
+}
+.gmail-email-row:hover { background: var(--bg-1); }
+.gmail-email-row.gmail-imported { opacity: 0.5; }
+
+.gmail-email-info { flex: 1; min-width: 0; }
+.gmail-email-subject { font-size: 13px; font-weight: 500; color: var(--text-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gmail-email-from  { font-size: 12px; color: var(--text-2); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gmail-email-date  { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.gmail-email-action { flex-shrink: 0; }
+
+.gmail-imported-badge { font-size: 11px; color: var(--green); background: var(--green-dim);
+  padding: 3px 8px; border-radius: 10px; }
+
+.assign-email-preview { background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px; }
+.assign-email-preview-inner { font-size: 13px; color: var(--text-1); }
